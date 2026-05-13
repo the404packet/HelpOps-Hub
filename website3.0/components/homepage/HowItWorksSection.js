@@ -69,8 +69,6 @@ function HowItWorksSection({ theme, tryItNowHref = "/devopsforum" }) {
         </div>
 
         <div className="relative mt-12">
-          <div className="hidden lg:block absolute top-20 left-[17%] right-[17%] h-[2px] bg-gradient-to-r from-cyan-400/70 via-sky-400/70 to-emerald-400/70"></div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7">
             {steps.map((step, index) => (
               <div
