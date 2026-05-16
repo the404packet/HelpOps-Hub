@@ -30,3 +30,10 @@ body:
 
         - label: 'I am willing to work on this issue (optional)'
           required: false
+
+  - type: checkboxes
+    attributes:
+      label: "GSSoC Participation"
+      options:
+        - label: "I am a GSSoC'26 contributor"
+          required: false
