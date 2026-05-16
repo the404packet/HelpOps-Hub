@@ -1,0 +1,42 @@
+name: Auto approve GSSOC PRs
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  approve-gssoc:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Check contributor and label PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const username = pr.user.login;
+
+            const label = "gssoc:approved";
+
+            // Get issues created by this user
+            const issues = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} type:issue author:${username} label:"gssoc'26"`
+            });
+
+            if (issues.data.total_count > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: [label]
+              });
+
+              console.log("PR labeled as gssoc:approved");
+            } else {
+              console.log("User has no GSSOC issue.");
+            }
