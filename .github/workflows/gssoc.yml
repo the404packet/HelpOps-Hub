@@ -1,0 +1,62 @@
+name: Label new issues with gssoc'26
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-gssoc-label:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Check checkbox and add label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue = context.payload.issue;
+            const issue_number = issue.number;
+
+            const body = issue.body || "";
+
+            const label = "gssoc'26";
+            const color = "5B1E78";
+            const description = "Under GirlScript Summer of Code 2026";
+
+            // Check if checkbox is ticked
+            const isChecked = body.includes("- [x] I am a GSSoC'26 contributor");
+
+            if (!isChecked) {
+              console.log("Checkbox not checked. Skipping label.");
+              return;
+            }
+
+            // Ensure label exists
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: label
+              });
+            } catch (err) {
+              if (err.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: label,
+                  color,
+                  description
+                });
+              }
+            }
+
+            // Add label
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number,
+              labels: [label]
+            });

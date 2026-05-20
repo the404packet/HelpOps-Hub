@@ -1,0 +1,58 @@
+name: Auto approve GSSOC PRs
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  approve-gssoc:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Check linked issue and label PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+
+            const body = pr.body || "";
+
+            const label = "gssoc:approved";
+
+            // Extract issue number from PR body (Fixes #123)
+            const match = body.match(/(?:fixes|closes|resolves)\s+#(\d+)/i);
+
+            if (!match) {
+              console.log("No linked issue found in PR.");
+              return;
+            }
+
+            const issue_number = parseInt(match[1]);
+
+            // Fetch issue details
+            const issue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number
+            });
+
+            const labels = issue.data.labels.map(l => l.name);
+
+            // Check if issue has gssoc label
+            if (labels.includes("gssoc'26")) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: [label]
+              });
+
+              console.log("PR approved for GSSOC");
+            } else {
+              console.log("Linked issue is not GSSOC.");
+            }
