@@ -1,0 +1,75 @@
+name: Label merged GSSOC PRs
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  label-after-merge:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Validate and label merged PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+
+            const body = pr.body || "";
+            const label = "gssoc:approved";
+
+            const match = body.match(/\b(?:fixes|closes|resolves)\s+#(\d+)\b/i);
+
+            if (!match) {
+              console.log("No valid linked issue found.");
+              return;
+            }
+
+            const issue_number = parseInt(match[1]);
+
+            const issue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number
+            });
+
+            if (issue.data.state !== "open") {
+              console.log("Issue is already closed. Skipping.");
+              return;
+            }
+
+            const issueLabels = issue.data.labels.map(l => l.name);
+            if (!issueLabels.includes("gssoc'26")) {
+              console.log("Not a GSSOC issue.");
+              return;
+            }
+
+            const issueAssignees = issue.data.assignees.map(a => a.login);
+            const prAuthor = pr.user.login;
+
+            if (!issueAssignees.includes(prAuthor)) {
+              console.log("PR author not assigned to issue.");
+              return;
+            }
+
+            const prLabels = pr.labels.map(l => l.name);
+            if (prLabels.includes(label)) {
+              console.log("Label already exists.");
+              return;
+            }
+            
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: pr.number,
+              labels: [label]
+            });
+
+            console.log("Merged PR labeled as GSSOC approved.");
