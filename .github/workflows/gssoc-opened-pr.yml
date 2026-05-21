@@ -1,0 +1,74 @@
+name: Label GSSOC PRs on Open/Edit
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  label-gssoc-pr:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Validate and label PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+
+            const body = pr.body || "";
+            const label = "gssoc'26";
+
+            const match = body.match(/\b(?:fixes|closes|resolves)\s+#(\d+)\b/i);
+
+            if (!match) {
+              console.log("No valid linked issue found.");
+              return;
+            }
+
+            const issue_number = parseInt(match[1]);
+
+            const issue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number
+            });
+
+            const issueLabels = issue.data.labels.map(l => l.name);
+            if (!issueLabels.includes("gssoc'26")) {
+              console.log("Not a GSSOC issue.");
+              return;
+            }
+
+            if (issue.data.state !== "open") {
+              console.log("Issue is not open.");
+              return;
+            }
+
+            const issueAssignees = issue.data.assignees.map(a => a.login);
+            const prAuthor = pr.user.login;
+
+            if (!issueAssignees.includes(prAuthor)) {
+              console.log("PR author is not assigned to this issue.");
+              return;
+            }
+
+            const prLabels = pr.labels.map(l => l.name);
+            if (prLabels.includes(label)) {
+              console.log("Label already exists.");
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: pr.number,
+              labels: [label]
+            });
+
+            console.log("PR labeled as GSSOC'26 PR.");
