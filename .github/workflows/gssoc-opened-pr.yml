@@ -1,6 +1,6 @@
 name: Label GSSOC PRs on Open/Edit
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited, synchronize]
 jobs:
   label-gssoc-pr:
