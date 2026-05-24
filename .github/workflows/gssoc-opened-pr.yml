@@ -1,0 +1,100 @@
+name: Label GSSOC PRs on Open/Edit
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize]
+jobs:
+  label-gssoc-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Validate and label PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const body = pr.body || "";
+            const label = "gssoc'26";
+
+            // DEBUG — remove after confirming it works
+            console.log("PR body:", JSON.stringify(body));
+            console.log("PR number:", pr.number);
+            console.log("PR author:", pr.user.login);
+
+            const matches = [...body.matchAll(/#(\d+)/g)];
+            console.log("All #refs found:", matches.map(m => m[1]));
+
+            if (matches.length === 0) {
+              console.log("No issue reference found.");
+              return;
+            }
+
+            let labeled = false;
+            for (const match of matches) {
+              const issue_number = parseInt(match[1]);
+
+              // Skip if the reference is the PR itself
+              if (issue_number === pr.number) {
+                console.log(`#${issue_number} is this PR itself, skipping.`);
+                continue;
+              }
+
+              let issue;
+              try {
+                issue = await github.rest.issues.get({ owner, repo, issue_number });
+              } catch (err) {
+                console.log(`Issue #${issue_number} not found (${err.status}), skipping.`);
+                continue;
+              }
+
+              // Skip if it's a PR reference, not an issue
+              if (issue.data.pull_request) {
+                console.log(`#${issue_number} is a PR, skipping.`);
+                continue;
+              }
+
+              console.log(`#${issue_number} labels:`, issue.data.labels.map(l => l.name));
+              console.log(`#${issue_number} state:`, issue.data.state);
+              console.log(`#${issue_number} assignees:`, issue.data.assignees.map(a => a.login));
+
+              const issueLabels = issue.data.labels.map(l => l.name);
+              if (!issueLabels.includes("gssoc'26")) {
+                console.log(`#${issue_number} is not a GSSOC issue, skipping.`);
+                continue;
+              }
+
+              if (issue.data.state !== "open") {
+                console.log(`#${issue_number} is not open, skipping.`);
+                continue;
+              }
+
+              const issueAssignees = issue.data.assignees.map(a => a.login);
+              const prAuthor = pr.user.login;
+              if (!issueAssignees.includes(prAuthor)) {
+                console.log(`PR author ${prAuthor} is not assigned to #${issue_number}, skipping.`);
+                continue;
+              }
+
+              const prLabels = pr.labels.map(l => l.name);
+              if (prLabels.includes(label)) {
+                console.log("Label already exists.");
+                return;
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: [label]
+              });
+              console.log(`PR labeled as GSSOC'26 via issue #${issue_number}.`);
+              labeled = true;
+              break;
+            }
+
+            if (!labeled) {
+              console.log("No valid GSSOC issue reference found in PR body.");
+            }

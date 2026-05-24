@@ -1,0 +1,80 @@
+name: Label merged GSSOC PRs
+on:
+  pull_request_target:
+    types: [closed]
+jobs:
+  label-after-merge:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Validate and label merged PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const body = pr.body || "";
+            const label = "gssoc:approved";
+
+            // Match any issue reference: #123, fixes #123, part of #123, etc.
+            const matches = [...body.matchAll(/#(\d+)/g)];
+            if (matches.length === 0) {
+              console.log("No issue reference found.");
+              return;
+            }
+
+            let labeled = false;
+            for (const match of matches) {
+              const issue_number = parseInt(match[1]);
+
+              let issue;
+              try {
+                issue = await github.rest.issues.get({ owner, repo, issue_number });
+              } catch (err) {
+                console.log(`Issue #${issue_number} not found, skipping.`);
+                continue;
+              }
+
+              // Skip if it's a PR reference, not an issue
+              if (issue.data.pull_request) {
+                console.log(`#${issue_number} is a PR, skipping.`);
+                continue;
+              }
+
+              const issueLabels = issue.data.labels.map(l => l.name);
+              if (!issueLabels.includes("gssoc'26")) {
+                console.log(`#${issue_number} is not a GSSOC issue, skipping.`);
+                continue;
+              }
+
+              const issueAssignees = issue.data.assignees.map(a => a.login);
+              const prAuthor = pr.user.login;
+              if (!issueAssignees.includes(prAuthor)) {
+                console.log(`PR author not assigned to #${issue_number}, skipping.`);
+                continue;
+              }
+
+              const prLabels = pr.labels.map(l => l.name);
+              if (prLabels.includes(label)) {
+                console.log("Label already exists.");
+                return;
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: [label]
+              });
+              console.log(`Merged PR labeled as GSSOC approved via issue #${issue_number}.`);
+              labeled = true;
+              break;
+            }
+
+            if (!labeled) {
+              console.log("No valid GSSOC issue reference found in PR body.");
+            }
