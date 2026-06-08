@@ -1,7 +1,9 @@
-name: Migration Task 🚀
+name: Migration Task
 description: Track migration work for the Next.js + Flask transition.
 title: "[Migration]"
-labels: [migration]
+labels:
+
+* migration
 
 body:
 
@@ -37,12 +39,12 @@ body:
   id: migration_changes
   attributes:
   label: Planned Changes
-  description: Describe what will be migrated and how it will be implemented in Next.js or Flask.
+  description: Describe the migration work that will be performed.
   placeholder: |
-  - Convert React page to Next.js page
-  - Move API endpoint to Flask Blueprint
-  - Update routing
-  - Refactor state management
+  - Convert React components to Next.js
+  - Move APIs to Flask
+  - Update routing and API calls
+  - Refactor authentication flow
   validations:
   required: true
 
@@ -52,10 +54,10 @@ body:
   label: Acceptance Criteria
   description: What conditions must be met for this migration to be considered complete?
   placeholder: |
-  - Functionality matches existing behavior
+  - Existing functionality is preserved
   - No UI regressions
-  - API responses remain compatible
-  - Tests pass
+  - API endpoints function correctly
+  - Tests pass successfully
   validations:
   required: true
 
@@ -74,19 +76,15 @@ body:
   options:
   - label: I have reviewed the existing implementation.
   required: true
-
-  ```
   - label: I have checked for duplicate migration issues.
-    required: true
-
-  - label: I have read the contributing guidelines.
-    required: true
-
-  - label: I am willing to work on this issue.
-    required: false
-  ```
+  required: true
+  - label: I have read the Contributing Guidelines.
+  required: true
+  - label: I am willing to work on this issue (optional).
+  required: false
 
 * type: checkboxes
+  id: gssoc
   attributes:
   label: GSSoC Participation
   options:
